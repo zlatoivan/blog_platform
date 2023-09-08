@@ -265,7 +265,7 @@ func (a *Api) PostBlogger(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("TWO ID's:", bloggerId, bloggerViewId)
 	a.Db.InsertSubscription(bloggerId, bloggerViewId)
 
-	http.Redirect(w, r, "/bloggers/"+strconv.Itoa(bloggerId)+"/subscribed", http.StatusFound)
+	http.Redirect(w, r, "/bloggers/"+strconv.Itoa(bloggerViewId)+"/subscribed", http.StatusFound)
 }
 
 func (a *Api) GetBloggerSubscribed(w http.ResponseWriter, r *http.Request) {
@@ -305,7 +305,7 @@ func (a *Api) PostBloggerSubscribed(w http.ResponseWriter, r *http.Request) {
 
 	a.Db.DeleteSubscription(bloggerId, bloggerViewId)
 
-	http.Redirect(w, r, "/bloggers/"+strconv.Itoa(bloggerId), http.StatusFound)
+	http.Redirect(w, r, "/bloggers/"+strconv.Itoa(bloggerViewId), http.StatusFound)
 }
 
 //func Logger(next http.Handler) http.Handler {
