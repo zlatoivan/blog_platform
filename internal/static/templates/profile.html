@@ -1,0 +1,19 @@
+{{template "header.html" .}}
+{{template "navbar.html" .}}
+
+<p>
+    {{ .Blogger.Login }} ({{ .Blogger.Name }} {{ .Blogger.Surname }}, {{ .Blogger.Country }})
+</p>
+
+{{if eq (len .Articles) 0}}
+    No articles. Create the first!
+{{end}}
+{{range .Articles}}
+    <h1>{{.Title}}</h1>
+    <div>
+        {{.ArticleMessage}}
+    </div>
+    <p>{{.Date}}</p>
+{{end}}
+
+{{template "footer.html" .}}

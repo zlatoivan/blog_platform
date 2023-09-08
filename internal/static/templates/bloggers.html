@@ -1,0 +1,13 @@
+{{template "header.html" .}}
+{{template "navbar.html" .}}
+
+{{if eq (len .) 0}}
+    No bloggers. You are the first!
+{{end}}
+{{range .}}
+    <a href="/bloggers/{{ .BloggerId }}">
+        <p>{{ .Login }} ({{ .Name }} {{ .Surname }}, {{ .Country }})</p>
+    </a>
+{{end}}
+
+{{template "footer.html" .}}
