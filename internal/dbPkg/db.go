@@ -7,6 +7,7 @@ import (
 	"html/template"
 	"log"
 	"net/http"
+	"slices"
 	_ "slices"
 )
 
@@ -313,16 +314,39 @@ func (d *DB) GetArticlesByBloggerId(bloggerId int) []*Article {
 	return articles
 }
 
+const selectSubsByBloggerId = `SELECT BloggerIdSub FROM Subscriptions WHERE BloggerId = ?`
+
+func (d *DB) GetSubsIdByBloggerId(bloggerId int) []int {
+	rows, err := d.Database.Query(selectSubsByBloggerId, bloggerId)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer rows.Close()
+
+	var subs []int
+	for rows.Next() {
+		var bloggerIdSub int
+		err = rows.Scan(&bloggerIdSub)
+		if err != nil {
+			d.Logger.Fatal(err)
+		}
+		subs = append(subs, bloggerIdSub)
+	}
+	return subs
+}
+
 const selectForBloggers = `SELECT BloggerId, Email, Login, Name, Surname, Country FROM Blogger`
 
-func (d *DB) GetBloggers(exceptBloggerId int) []*Blogger {
+func (d *DB) GetSubsAndNotSubs(exceptBloggerId int) ([]*Blogger, []*Blogger) {
 	rows, err := d.Database.Query(selectForBloggers)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer rows.Close()
 
-	bloggers := make([]*Blogger, 0)
+	subs := d.GetSubsIdByBloggerId(exceptBloggerId)
+	bloggersNotSub := make([]*Blogger, 0)
+	bloggersSub := make([]*Blogger, 0)
 	for rows.Next() {
 		data := new(Blogger)
 		err = rows.Scan(
@@ -335,11 +359,17 @@ func (d *DB) GetBloggers(exceptBloggerId int) []*Blogger {
 		if err != nil {
 			log.Fatal(err)
 		}
-		if exceptBloggerId != data.BloggerId {
-			bloggers = append(bloggers, data)
+		if exceptBloggerId == data.BloggerId {
+			continue
+		}
+		if slices.Contains(subs, data.BloggerId) {
+			bloggersSub = append(bloggersSub, data)
+		} else {
+			bloggersNotSub = append(bloggersNotSub, data)
 		}
 	}
-	return bloggers
+
+	return bloggersSub, bloggersNotSub
 }
 
 const selectBloggerByBloggerId = `SELECT BloggerId, Login, Name, Surname, Country FROM Blogger WHERE BloggerId = ?`

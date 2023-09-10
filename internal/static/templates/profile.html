@@ -1,15 +1,15 @@
 {{template "header.html" .}}
 {{template "navbar.html" .}}
 
-<p>
+<h2>
     {{ .Blogger.Login }} ({{ .Blogger.Name }} {{ .Blogger.Surname }}, {{ .Blogger.Country }})
-</p>
+</h2>
 
 {{if eq (len .Articles) 0}}
     No articles. Create the first!
 {{end}}
 {{range .Articles}}
-    <h1>{{.Title}}</h1>
+    <h3>{{.Title}}</h3>
     <div>
         {{.ArticleMessage}}
     </div>

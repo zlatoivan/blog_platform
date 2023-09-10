@@ -22,7 +22,7 @@ const headerHtmlPath = "internal/static/templates/header.html"
 const footerHtmlPath = "internal/static/templates/footer.html"
 const navbarHtmlPath = "internal/static/templates/navbar.html"
 const insertArticleHtmlPath = "internal/static/templates/insertArticle.html"
-const mainPageHtmlPath = "internal/static/templates/mainPage.html"
+const subsArticlesHtmlPath = "internal/static/templates/subsArticles.html"
 const registerHtmlPath = "internal/static/templates/register.html"
 const loginHtmlPath = "internal/static/templates/login.html"
 const profileHtmlPath = "internal/static/templates/profile.html"
@@ -30,18 +30,34 @@ const bloggersHtmlPath = "internal/static/templates/bloggers.html"
 const bloggerProfileHtmlPath = "internal/static/templates/bloggerProfile.html"
 const bloggerProfileSubscribedHtmlPath = "internal/static/templates/bloggerProfileSubscribed.html"
 
-func (a *Api) GetMainPage(w http.ResponseWriter, r *http.Request) {
-	t, err := template.ParseFiles(mainPageHtmlPath, headerHtmlPath, footerHtmlPath, navbarHtmlPath)
+func (a *Api) GetSubsArticles(w http.ResponseWriter, r *http.Request) {
+	bloggerId := getBloggerFromCtx(r.Context()).BloggerId
+	subs, _ := a.Db.GetSubsAndNotSubs(bloggerId)
+
+	data := make([]struct {
+		Blogger  *dbPkg.Blogger
+		Articles []*dbPkg.Article
+	}, 0)
+	for _, blogger := range subs {
+		articles := a.Db.GetArticlesByBloggerId(blogger.BloggerId)
+		combo := struct {
+			Blogger  *dbPkg.Blogger
+			Articles []*dbPkg.Article
+		}{
+			Blogger:  blogger,
+			Articles: articles,
+		}
+		data = append(data, combo)
+	}
+
+	t, err := template.ParseFiles(subsArticlesHtmlPath, headerHtmlPath, footerHtmlPath, navbarHtmlPath)
 	if err != nil {
 		log.Fatal(err) //a.Db.Logger.Fatal(err)
 	}
-	err = t.Execute(w, nil)
+	err = t.Execute(w, data)
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	// Echo out the cookie value in the response body.
-	//w.Write([]byte(cookie.Value))
 }
 
 func (a *Api) CheckAuth(next http.Handler) http.Handler {
@@ -192,12 +208,21 @@ func (a *Api) PostInsertArticle(w http.ResponseWriter, r *http.Request) {
 
 func (a *Api) GetBloggers(w http.ResponseWriter, r *http.Request) {
 	exceptBloggerId := getBloggerFromCtx(r.Context()).BloggerId
-	bloggers := a.Db.GetBloggers(exceptBloggerId)
+	bloggersSub, bloggersNotSub := a.Db.GetSubsAndNotSubs(exceptBloggerId)
+
+	data := struct {
+		BloggersSub    []*dbPkg.Blogger
+		BloggersNotSub []*dbPkg.Blogger
+	}{
+		BloggersSub:    bloggersSub,
+		BloggersNotSub: bloggersNotSub,
+	}
+
 	t, err := template.ParseFiles(bloggersHtmlPath, headerHtmlPath, footerHtmlPath, navbarHtmlPath)
 	if err != nil {
 		log.Fatal(err)
 	}
-	err = t.Execute(w, bloggers)
+	err = t.Execute(w, data)
 	if err != nil {
 		log.Fatal(err)
 	}

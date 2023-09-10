@@ -1,10 +1,15 @@
 {{template "header.html" .}}
 {{template "navbar.html" .}}
 
-{{if eq (len .) 0}}
-    No bloggers. You are the first!
+<p>Subscriptions</p>
+{{range .BloggersSub}}
+    <a href="/bloggers/{{ .BloggerId }}/subscribed">
+        <p>{{ .Login }} ({{ .Name }} {{ .Surname }}, {{ .Country }})</p>
+    </a>
 {{end}}
-{{range .}}
+
+<p>Not subscriptions</p>
+{{range .BloggersNotSub}}
     <a href="/bloggers/{{ .BloggerId }}">
         <p>{{ .Login }} ({{ .Name }} {{ .Surname }}, {{ .Country }})</p>
     </a>

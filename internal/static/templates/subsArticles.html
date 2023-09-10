@@ -1,0 +1,23 @@
+{{template "header.html" .}}
+{{template "navbar.html" .}}
+
+<p>News:</p>
+
+{{range .}}
+    <h2>
+        {{ .Blogger.Login }} ({{ .Blogger.Name }} {{ .Blogger.Surname }}, {{ .Blogger.Country }})
+    </h2>
+
+    {{if eq (len .Articles) 0}}
+        No articles. Blogger is modest...
+    {{end}}
+    {{range .Articles}}
+        <h3>{{.Title}}</h3>
+        <div>
+            {{.ArticleMessage}}
+        </div>
+        <p>{{.Date}}</p>
+    {{end}}
+{{end}}
+
+{{template "footer.html" .}}
