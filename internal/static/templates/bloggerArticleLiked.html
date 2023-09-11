@@ -1,0 +1,16 @@
+{{template "header.html" .}}
+{{template "navbar.html" .}}
+
+<h3>{{.Article.Title}}</h3>
+<div>
+    {{.Article.ArticleMessage}}
+</div>
+<p>{{.Article.Date}}</p>
+
+<p>Likes {{.LikesCnt}} people</p>
+
+<form method="post">
+    <button type="submit">Cancel like</button>
+</form>
+
+{{template "footer.html" .}}

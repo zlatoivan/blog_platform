@@ -29,6 +29,8 @@ const profileHtmlPath = "internal/static/templates/profile.html"
 const bloggersHtmlPath = "internal/static/templates/bloggers.html"
 const bloggerProfileHtmlPath = "internal/static/templates/bloggerProfile.html"
 const bloggerProfileSubscribedHtmlPath = "internal/static/templates/bloggerProfileSubscribed.html"
+const bloggerArticleHtmlPath = "internal/static/templates/bloggerArticle.html"
+const bloggerArticleLikedHtmlPath = "internal/static/templates/bloggerArticleLiked.html"
 
 func (a *Api) GetSubsArticles(w http.ResponseWriter, r *http.Request) {
 	bloggerId := getBloggerFromCtx(r.Context()).BloggerId
@@ -258,14 +260,18 @@ func (a *Api) GetBlogger(w http.ResponseWriter, r *http.Request) {
 	bloggerId, _ := strconv.Atoi(bloggerIdFromURL)
 	blogger := a.Db.GetBloggerByBloggerId(bloggerId)
 
-	articles := a.Db.GetArticlesByBloggerId(bloggerId)
+	bloggerIdCur := getBloggerFromCtx(r.Context()).BloggerId
+	articlesLiked, articlesNotLiked := a.Db.GetLikedAndNotLiked(bloggerId, bloggerIdCur)
+	fmt.Println("LIKED:", articlesLiked, articlesNotLiked)
 
 	data := struct {
-		Blogger  *dbPkg.Blogger
-		Articles []*dbPkg.Article
+		Blogger          *dbPkg.Blogger
+		ArticlesLiked    []*dbPkg.Article
+		ArticlesNotLiked []*dbPkg.Article
 	}{
-		Blogger:  blogger,
-		Articles: articles,
+		Blogger:          blogger,
+		ArticlesLiked:    articlesLiked,
+		ArticlesNotLiked: articlesNotLiked,
 	}
 
 	fmt.Println("Before template")
@@ -298,16 +304,19 @@ func (a *Api) GetBloggerSubscribed(w http.ResponseWriter, r *http.Request) {
 
 	bloggerIdFromURL := chi.URLParam(r, "bloggerId")
 	bloggerId, _ := strconv.Atoi(bloggerIdFromURL)
-
 	blogger := a.Db.GetBloggerByBloggerId(bloggerId)
-	articles := a.Db.GetArticlesByBloggerId(bloggerId)
+
+	bloggerIdCur := getBloggerFromCtx(r.Context()).BloggerId
+	articlesLiked, articlesNotLiked := a.Db.GetLikedAndNotLiked(bloggerId, bloggerIdCur)
 
 	data := struct {
-		Blogger  *dbPkg.Blogger
-		Articles []*dbPkg.Article
+		Blogger          *dbPkg.Blogger
+		ArticlesLiked    []*dbPkg.Article
+		ArticlesNotLiked []*dbPkg.Article
 	}{
-		Blogger:  blogger,
-		Articles: articles,
+		Blogger:          blogger,
+		ArticlesLiked:    articlesLiked,
+		ArticlesNotLiked: articlesNotLiked,
 	}
 
 	t, err := template.ParseFiles(bloggerProfileSubscribedHtmlPath, headerHtmlPath, footerHtmlPath, navbarHtmlPath)
@@ -331,6 +340,92 @@ func (a *Api) PostBloggerSubscribed(w http.ResponseWriter, r *http.Request) {
 	a.Db.DeleteSubscription(bloggerId, bloggerViewId)
 
 	http.Redirect(w, r, "/bloggers/"+strconv.Itoa(bloggerViewId), http.StatusFound)
+}
+
+func (a *Api) GetBloggerArticle(w http.ResponseWriter, r *http.Request) {
+	articleIdFromURL := chi.URLParam(r, "articleId")
+	articleId, _ := strconv.Atoi(articleIdFromURL)
+	article := a.Db.GetArticleByArticleId(articleId)
+
+	//bloggerId := getBloggerFromCtx(r.Context()).BloggerId
+	//isLiked := a.Db.IsLiked(bloggerId, articleId)
+	//if isLiked {
+	//	http.Redirect(w, r, "/bloggers/"+chi.URLParam(r, "bloggerId")+"/"+articleIdFromURL+"/liked", http.StatusFound)
+	//}
+
+	likesCnt := a.Db.GetLikesCntByArticleId(articleId)
+
+	data := struct {
+		Article  *dbPkg.Article
+		LikesCnt int
+	}{
+		Article:  article,
+		LikesCnt: likesCnt,
+	}
+
+	t, err := template.ParseFiles(bloggerArticleHtmlPath, headerHtmlPath, footerHtmlPath, navbarHtmlPath)
+	if err != nil {
+		log.Fatal(err) //a.Db.Logger.Fatal(err)
+	}
+	err = t.Execute(w, data)
+	if err != nil {
+		log.Fatal(err) //a.Db.Logger.Fatal(err)
+	}
+}
+
+func (a *Api) PostBloggerArticle(w http.ResponseWriter, r *http.Request) {
+	bloggerId := getBloggerFromCtx(r.Context()).BloggerId
+	articleIdFromURL := chi.URLParam(r, "articleId")
+	articleId, _ := strconv.Atoi(articleIdFromURL)
+
+	a.Db.InsertLike(bloggerId, articleId)
+
+	bloggerIdFromURL := chi.URLParam(r, "bloggerId")
+
+	http.Redirect(w, r, "/bloggers/"+bloggerIdFromURL+"/"+articleIdFromURL+"/liked", http.StatusFound)
+}
+
+func (a *Api) GetBloggerArticleLiked(w http.ResponseWriter, r *http.Request) {
+	articleIdFromURL := chi.URLParam(r, "articleId")
+	articleId, _ := strconv.Atoi(articleIdFromURL)
+	article := a.Db.GetArticleByArticleId(articleId)
+
+	//bloggerId := getBloggerFromCtx(r.Context()).BloggerId
+	//isLiked := a.Db.IsLiked(bloggerId, articleId)
+	//if isLiked {
+	//	http.Redirect(w, r, "/bloggers/"+chi.URLParam(r, "bloggerId")+"/"+articleIdFromURL, http.StatusFound)
+	//}
+
+	likesCnt := a.Db.GetLikesCntByArticleId(articleId)
+
+	data := struct {
+		Article  *dbPkg.Article
+		LikesCnt int
+	}{
+		Article:  article,
+		LikesCnt: likesCnt,
+	}
+
+	t, err := template.ParseFiles(bloggerArticleLikedHtmlPath, headerHtmlPath, footerHtmlPath, navbarHtmlPath)
+	if err != nil {
+		log.Fatal(err) //a.Db.Logger.Fatal(err)
+	}
+	err = t.Execute(w, data)
+	if err != nil {
+		log.Fatal(err) //a.Db.Logger.Fatal(err)
+	}
+}
+
+func (a *Api) PostBloggerArticleLiked(w http.ResponseWriter, r *http.Request) {
+	bloggerId := getBloggerFromCtx(r.Context()).BloggerId
+	articleIdFromURL := chi.URLParam(r, "articleId")
+	articleId, _ := strconv.Atoi(articleIdFromURL)
+
+	a.Db.DeleteLike(bloggerId, articleId)
+
+	bloggerIdFromURL := chi.URLParam(r, "bloggerId")
+
+	http.Redirect(w, r, "/bloggers/"+bloggerIdFromURL+"/"+articleIdFromURL, http.StatusFound)
 }
 
 //func Logger(next http.Handler) http.Handler {

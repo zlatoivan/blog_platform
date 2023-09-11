@@ -1,7 +1,7 @@
 {{template "header.html" .}}
 {{template "navbar.html" .}}
 
-<p>News:</p>
+<p style="margin-left:20px;">News:</p>
 
 {{range .}}
     <h2>
@@ -12,7 +12,9 @@
         No articles. Blogger is modest...
     {{end}}
     {{range .Articles}}
-        <h3>{{.Title}}</h3>
+        <a href="/bloggers/{{ .ArticleId }}/{{ .BloggerId }}">
+            <h3>{{.Title}}</h3>
+        </a>
         <div>
             {{.ArticleMessage}}
         </div>

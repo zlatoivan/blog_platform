@@ -1,14 +1,14 @@
 {{template "header.html" .}}
 {{template "navbar.html" .}}
 
-<p>Subscriptions</p>
+<p style="margin-left:20px;">Subscriptions</p>
 {{range .BloggersSub}}
     <a href="/bloggers/{{ .BloggerId }}/subscribed">
         <p>{{ .Login }} ({{ .Name }} {{ .Surname }}, {{ .Country }})</p>
     </a>
 {{end}}
 
-<p>Not subscriptions</p>
+<p style="margin-left:20px;">Not subscriptions</p>
 {{range .BloggersNotSub}}
     <a href="/bloggers/{{ .BloggerId }}">
         <p>{{ .Login }} ({{ .Name }} {{ .Surname }}, {{ .Country }})</p>

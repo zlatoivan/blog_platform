@@ -49,6 +49,11 @@ func main() {
 				r.Post("/", a.PostBlogger)
 				r.Get("/subscribed", a.GetBloggerSubscribed)
 				r.Post("/subscribed", a.PostBloggerSubscribed)
+
+				r.Get("/{articleId}", a.GetBloggerArticle)
+				r.Post("/{articleId}", a.PostBloggerArticle)
+				r.Get("/{articleId}/liked", a.GetBloggerArticleLiked)
+				r.Post("/{articleId}/liked", a.PostBloggerArticleLiked)
 			})
 		})
 
@@ -77,7 +82,7 @@ func main() {
 //	r.Post("/", a.PostInsertArticle) // +
 //	r.Route("/{articleID}", func(r chi.Router) {
 //		r.Use(ArticleCtx)
-//		r.Get("/", GetArticle)       // GET /articles/1234
+//		r.Get("/", GetBloggerArticle)       // GET /articles/1234
 //		r.Put("/", UpdateArticle)    // PUT /articles/1234
 //		r.Delete("/", DeleteArticle) // DELETE /articles/1234
 //		r.Get("/edit", EditArticle)  // GET /articles/1234/edit

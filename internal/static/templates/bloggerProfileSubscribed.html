@@ -9,11 +9,22 @@
     <button type="submit">Unsubscribe</button>
 </form>
 
-{{if eq (len .Articles) 0}}
-    No articles. Blogger is modest...
+<p style="margin-left:20px;">Liked:</p>
+{{range .ArticlesLiked}}
+    <a href="/bloggers/{{ .BloggerId }}/{{ .ArticleId }}/liked">
+        <h3>{{.Title}}</h3>
+    </a>
+    <div>
+        {{.ArticleMessage}}
+    </div>
+    <p>{{.Date}}</p>
 {{end}}
-{{range .Articles}}
-    <h3>{{.Title}}</h3>
+
+<p style="margin-left:20px;">Not liked:</p>
+{{range .ArticlesNotLiked}}
+    <a href="/bloggers/{{ .BloggerId }}/{{ .ArticleId }}">
+        <h3>{{.Title}}</h3>
+    </a>
     <div>
         {{.ArticleMessage}}
     </div>

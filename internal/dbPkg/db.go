@@ -28,7 +28,7 @@ type Blogger struct {
 }
 
 type Article struct {
-	PostId         int
+	ArticleId      int
 	BloggerId      int
 	Title          string
 	ArticleMessage template.HTML
@@ -38,14 +38,14 @@ type Article struct {
 type Comment struct {
 	CommentId      int
 	BloggerId      int
-	PostId         int
+	ArticleId      int
 	CommentMessage string
 	Date           string
 }
 
 type Like struct {
 	BloggerId int
-	PostId    int
+	ArticleId int
 }
 
 type Subscriptions struct {
@@ -93,28 +93,28 @@ const createTablesConst string = `
 		FOREIGN KEY(BloggerId) REFERENCES Blogger(BloggerId) ON DELETE CASCADE ON UPDATE CASCADE
 	);
 
-	CREATE TABLE IF NOT EXISTS Comment (
-	    CommentId INTEGER NOT NULL PRIMARY KEY,
-		BloggerId INTEGER NOT NULL,
-		PostId INTEGER NOT NULL,
-		CommentMessage NVARCHAR NOT NULL,
-		Date DATETIME NOT NULL,
-		FOREIGN KEY(BloggerId) REFERENCES Blogger(BloggerId) ON DELETE CASCADE,
-		FOREIGN KEY(PostId) REFERENCES Article(ArticleId) ON DELETE CASCADE
-	);
-
-	CREATE TABLE IF NOT EXISTS Like (
-		BloggerId INTEGER NOT NULL,
-		PostId INTEGER NOT NULL,
-		FOREIGN KEY(BloggerId) REFERENCES Blogger(BloggerId) ON DELETE CASCADE,
-		FOREIGN KEY(PostId) REFERENCES Article(ArticleId) ON DELETE CASCADE,
-	    PRIMARY KEY (BloggerId, PostId)
-	);
-
 	CREATE TABLE IF NOT EXISTS Subscriptions (
 		BloggerId INTEGER NOT NULL,
 		BloggerIdSub INTEGER NOT NULL,
 		FOREIGN KEY(BloggerId) REFERENCES Blogger(BloggerId) ON DELETE CASCADE
+	);
+
+	CREATE TABLE IF NOT EXISTS Comment (
+	    CommentId INTEGER NOT NULL PRIMARY KEY,
+		BloggerId INTEGER NOT NULL,
+		ArticleId INTEGER NOT NULL,
+		CommentMessage NVARCHAR NOT NULL,
+		Date DATETIME NOT NULL,
+		FOREIGN KEY(BloggerId) REFERENCES Blogger(BloggerId) ON DELETE CASCADE,
+		FOREIGN KEY(ArticleId) REFERENCES Article(ArticleId) ON DELETE CASCADE
+	);
+
+	CREATE TABLE IF NOT EXISTS Like (
+		BloggerId INTEGER NOT NULL,
+		ArticleId INTEGER NOT NULL,
+		FOREIGN KEY(BloggerId) REFERENCES Blogger(BloggerId) ON DELETE CASCADE,
+		FOREIGN KEY(ArticleId) REFERENCES Article(ArticleId) ON DELETE CASCADE,
+	    PRIMARY KEY (BloggerId, ArticleId)
 	);
 `
 
@@ -145,10 +145,10 @@ func (d *DB) InsertBlogger(b *Blogger) {
 }
 
 // Insert Article
-const insertPostConst = `INSERT INTO Article VALUES(NULL, ?, ?, ?, ?);`
+const insertArticleConst = `INSERT INTO Article VALUES(NULL, ?, ?, ?, ?);`
 
 func (d *DB) InsertArticle(p *Article) int64 {
-	lastPost, err := d.Database.Exec(insertPostConst, p.BloggerId, p.Title, p.ArticleMessage, p.Date)
+	lastPost, err := d.Database.Exec(insertArticleConst, p.BloggerId, p.Title, p.ArticleMessage, p.Date)
 	if err != nil {
 		d.Logger.Fatal(err)
 	}
@@ -160,8 +160,8 @@ func (d *DB) InsertArticle(p *Article) int64 {
 // Insert Comment
 const insertCommentConst = `INSERT INTO Comment VALUES(NULL, ?, ?, ?, ?);`
 
-func (d *DB) insertComment(bloggerId int, postId int, commentMessage string, date string) {
-	_, err := d.Database.Exec(insertCommentConst, bloggerId, postId, commentMessage, date)
+func (d *DB) insertComment(bloggerId int, articleId int, commentMessage string, date string) {
+	_, err := d.Database.Exec(insertCommentConst, bloggerId, articleId, commentMessage, date)
 	if err != nil {
 		d.Logger.Fatal(err)
 	}
@@ -170,8 +170,8 @@ func (d *DB) insertComment(bloggerId int, postId int, commentMessage string, dat
 // Insert Like
 const insertLikeConst = `INSERT INTO Like VALUES(?, ?);`
 
-func (d *DB) insertLike(bloggerId int, postId int) {
-	_, err := d.Database.Exec(insertLikeConst, bloggerId, postId)
+func (d *DB) InsertLike(bloggerId int, articleId int) {
+	_, err := d.Database.Exec(insertLikeConst, bloggerId, articleId)
 	if err != nil {
 		d.Logger.Fatal(err)
 	}
@@ -190,8 +190,8 @@ func (d *DB) deleteBlogger(bloggerId int) {
 // Delete Article
 const deletePostConst = `DELETE FROM Article WHERE ArticleId = ?;`
 
-func (d *DB) deletePost(postId int) {
-	_, err := d.Database.Exec(deletePostConst, postId)
+func (d *DB) deletePost(articleId int) {
+	_, err := d.Database.Exec(deletePostConst, articleId)
 	if err != nil {
 		d.Logger.Fatal(err)
 	}
@@ -208,12 +208,30 @@ func (d *DB) deleteComment(commentId int) {
 }
 
 // Delete Comment
-const deleteLikeConst = `DELETE FROM Like WHERE BloggerId = ? AND PostId = ?;`
+const deleteLikeConst = `DELETE FROM Like WHERE BloggerId = ? AND articleId = ?;`
 
-func (d *DB) deleteLike(bloggerId int, postId int) {
-	_, err := d.Database.Exec(deleteLikeConst, bloggerId, postId)
+func (d *DB) DeleteLike(bloggerId int, articleId int) {
+	_, err := d.Database.Exec(deleteLikeConst, bloggerId, articleId)
 	if err != nil {
 		d.Logger.Fatal(err)
+	}
+}
+
+const insertSubscriptionConst = `INSERT INTO Subscriptions VALUES(?, ?);`
+
+func (d *DB) InsertSubscription(bloggerId int, bloggerViewId int) {
+	_, err := d.Database.Exec(insertSubscriptionConst, bloggerId, bloggerViewId)
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+const deleteSubscriptionConst = `DELETE FROM Subscriptions WHERE BloggerId = ? AND BloggerIdSub = ?;`
+
+func (d *DB) DeleteSubscription(bloggerId int, bloggerViewId int) {
+	_, err := d.Database.Exec(deleteSubscriptionConst, bloggerId, bloggerViewId)
+	if err != nil {
+		log.Fatal(err)
 	}
 }
 
@@ -289,10 +307,10 @@ func (d *DB) GetBloggerByEmailPassword(emailForm string, passwordForm string) *B
 	return nil
 }
 
-const selectArticle = `SELECT Title, ArticleMessage, Date FROM Article WHERE BloggerId = ?;`
+const selectArticles = `SELECT ArticleId, BloggerId, Title, ArticleMessage, Date FROM Article WHERE BloggerId = ?;`
 
 func (d *DB) GetArticlesByBloggerId(bloggerId int) []*Article {
-	rows, err := d.Database.Query(selectArticle, bloggerId)
+	rows, err := d.Database.Query(selectArticles, bloggerId)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -302,6 +320,8 @@ func (d *DB) GetArticlesByBloggerId(bloggerId int) []*Article {
 	for rows.Next() {
 		data := new(Article)
 		err = rows.Scan(
+			&data.ArticleId,
+			&data.BloggerId,
 			&data.Title,
 			&data.ArticleMessage,
 			&data.Date,
@@ -312,6 +332,75 @@ func (d *DB) GetArticlesByBloggerId(bloggerId int) []*Article {
 		articles = append(articles, data)
 	}
 	return articles
+}
+
+const selectArticle = `SELECT ArticleId, BloggerId, Title, ArticleMessage, Date FROM Article WHERE ArticleId = ?;`
+
+func (d *DB) GetArticleByArticleId(articleId int) *Article {
+	rows, err := d.Database.Query(selectArticle, articleId)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		article := new(Article)
+		err = rows.Scan(
+			&article.ArticleId,
+			&article.BloggerId,
+			&article.Title,
+			&article.ArticleMessage,
+			&article.Date,
+		)
+		if err != nil {
+			log.Fatal(err)
+		}
+		return article
+	}
+	return nil
+}
+
+const selectLike = `SELECT COUNT(*) FROM Like WHERE ArticleId = ?;`
+
+func (d *DB) GetLikesCntByArticleId(articleId int) int {
+	rows, err := d.Database.Query(selectLike, articleId)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer rows.Close()
+
+	var likesCnt int
+	for rows.Next() {
+		err = rows.Scan(&likesCnt)
+		if err != nil {
+			d.Logger.Fatal(err)
+		}
+	}
+	return likesCnt
+}
+
+const selectIsLiked = `SELECT COUNT(*) FROM Like WHERE BloggerId = ? AND ArticleId = ?;`
+
+func (d *DB) IsLiked(bloggerId int, articleId int) bool {
+	rows, err := d.Database.Query(selectIsLiked, bloggerId, articleId)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer rows.Close()
+
+	var isLiked int
+	for rows.Next() {
+		err = rows.Scan(&isLiked)
+		if err != nil {
+			d.Logger.Fatal(err)
+		}
+	}
+	fmt.Println("isLiked", isLiked)
+	if isLiked == 0 {
+		return false
+	} else {
+		return true
+	}
 }
 
 const selectSubsByBloggerId = `SELECT BloggerIdSub FROM Subscriptions WHERE BloggerId = ?`
@@ -372,6 +461,61 @@ func (d *DB) GetSubsAndNotSubs(exceptBloggerId int) ([]*Blogger, []*Blogger) {
 	return bloggersSub, bloggersNotSub
 }
 
+const selectLikedByBloggerId = `SELECT ArticleId FROM Like WHERE BloggerId = ?`
+
+func (d *DB) GetLikedByBloggerId(bloggerId int) []int {
+	rows, err := d.Database.Query(selectLikedByBloggerId, bloggerId)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer rows.Close()
+
+	var liked []int
+	for rows.Next() {
+		var articleIdLiked int
+		err = rows.Scan(&articleIdLiked)
+		if err != nil {
+			log.Fatal(err)
+		}
+		liked = append(liked, articleIdLiked)
+	}
+	return liked
+}
+
+const selectLiked = `SELECT ArticleId, BloggerId, Title, ArticleMessage, Date FROM Article WHERE BloggerId = ?;`
+
+func (d *DB) GetLikedAndNotLiked(bloggerId int, bloggerIdCur int) ([]*Article, []*Article) {
+	rows, err := d.Database.Query(selectLiked, bloggerId)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer rows.Close()
+
+	liked := d.GetLikedByBloggerId(bloggerIdCur)
+	fmt.Println("liked id:", liked)
+	articlesNotLiked := make([]*Article, 0)
+	articlesLiked := make([]*Article, 0)
+	for rows.Next() {
+		data := new(Article)
+		err = rows.Scan(
+			&data.ArticleId,
+			&data.BloggerId,
+			&data.Title,
+			&data.ArticleMessage,
+			&data.Date,
+		)
+		if err != nil {
+			log.Fatal(err)
+		}
+		if slices.Contains(liked, data.ArticleId) {
+			articlesLiked = append(articlesLiked, data)
+		} else {
+			articlesNotLiked = append(articlesNotLiked, data)
+		}
+	}
+	return articlesLiked, articlesNotLiked
+}
+
 const selectBloggerByBloggerId = `SELECT BloggerId, Login, Name, Surname, Country FROM Blogger WHERE BloggerId = ?`
 
 func (d *DB) GetBloggerByBloggerId(bloggerId int) *Blogger {
@@ -396,24 +540,6 @@ func (d *DB) GetBloggerByBloggerId(bloggerId int) *Blogger {
 		return blogger
 	}
 	return nil
-}
-
-const insertSubscriptionConst = `INSERT INTO Subscriptions VALUES(?, ?);`
-
-func (d *DB) InsertSubscription(bloggerId int, bloggerViewId int) {
-	_, err := d.Database.Exec(insertSubscriptionConst, bloggerId, bloggerViewId)
-	if err != nil {
-		log.Fatal(err)
-	}
-}
-
-const deleteSubscriptionConst = `DELETE FROM Subscriptions WHERE BloggerId = ? AND BloggerIdSub = ?;`
-
-func (d *DB) DeleteSubscription(bloggerId int, bloggerViewId int) {
-	_, err := d.Database.Exec(deleteSubscriptionConst, bloggerId, bloggerViewId)
-	if err != nil {
-		log.Fatal(err)
-	}
 }
 
 // ---------------------------------------------------------------------------------------------------
@@ -464,13 +590,13 @@ func (d *DB) printTablePost() {
 	}
 	defer rows.Close()
 	for rows.Next() {
-		var bloggerId, postId int
+		var bloggerId, articleId int
 		var title, postMessage, date string
-		err = rows.Scan(&postId, &bloggerId, &title, &postMessage, &date)
+		err = rows.Scan(&articleId, &bloggerId, &title, &postMessage, &date)
 		if err != nil {
 			d.Logger.Fatal(err)
 		}
-		fmt.Printf("\t%d) %d-BloggerId %s %s %s\n", postId, bloggerId, title, postMessage, date)
+		fmt.Printf("\t%d) %d-BloggerId %s %s %s\n", articleId, bloggerId, title, postMessage, date)
 	}
 }
 
@@ -483,13 +609,13 @@ func (d *DB) printTableComment() {
 	}
 	defer rows.Close()
 	for rows.Next() {
-		var commentId, bloggerId, postId int
+		var commentId, bloggerId, articleId int
 		var commentMessage, date string
-		err = rows.Scan(&commentId, &bloggerId, &postId, &commentMessage, &date)
+		err = rows.Scan(&commentId, &bloggerId, &articleId, &commentMessage, &date)
 		if err != nil {
 			d.Logger.Fatal(err)
 		}
-		fmt.Printf("\t%d) %d-BloggerId %d-PostId %s %s\n", commentId, bloggerId, postId, commentMessage, date)
+		fmt.Printf("\t%d) %d-BloggerId %d-articleId %s %s\n", commentId, bloggerId, articleId, commentMessage, date)
 	}
 }
 
@@ -502,12 +628,12 @@ func (d *DB) printTableLike() {
 	}
 	defer rows.Close()
 	for rows.Next() {
-		var bloggerId, postId int
-		err = rows.Scan(&bloggerId, &postId)
+		var bloggerId, articleId int
+		err = rows.Scan(&bloggerId, &articleId)
 		if err != nil {
 			d.Logger.Fatal(err)
 		}
-		fmt.Printf("\t%d-BloggerId %d-PostId\n", bloggerId, postId)
+		fmt.Printf("\t%d-BloggerId %d-articleId\n", bloggerId, articleId)
 	}
 }
 
@@ -567,10 +693,10 @@ func DbWork() {
 //dbPkg.insertPost(1, "Sport", "Sport is heath", "2023-08-29 20:37")
 //dbPkg.insertPost(2, "Theatre", "I visited Gogol Theatre", "2023-08-29 22:08")
 //dbPkg.insertPost(2, "Music", "Rap is the best", "2023-08-29 22:11")
-//lastPostId := dbPkg.insertPost(2, "Dancing", "My love is Hip-hop", "2023-08-29 23:23")
+//lastarticleId := dbPkg.insertPost(2, "Dancing", "My love is Hip-hop", "2023-08-29 23:23")
 //dbPkg.printTablePost()
 //fmt.Println()
-//fmt.Printf("\tlastPostId = %d\n\n", lastPostId)
+//fmt.Printf("\tlastarticleId = %d\n\n", lastarticleId)
 
 //dbPkg.insertComment(2, 2, "Good post!", "2023-08-29 20:56")
 //dbPkg.insertComment(1, 3, "WTF?", "2023-08-29 19:59")
