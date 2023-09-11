@@ -1,16 +1,17 @@
 {{template "header.html" .}}
 {{template "navbar.html" .}}
 
-<h2>
-    {{ .Blogger.Login }} ({{ .Blogger.Name }} {{ .Blogger.Surname }}, {{ .Blogger.Country }})
-</h2>
+<div class="container">
+    <h2>
+        {{ .Blogger.Login }} ({{ .Blogger.Name }} {{ .Blogger.Surname }}, {{ .Blogger.Country }})
+    </h2>
 
-<form method="post">
-    <button type="submit">Subscribe</button>
-</form>
+    <form method="post">
+        <button type="submit">Subscribe</button>
+    </form>
 
-<p style="margin-left:20px;">Liked:</p>
-{{range .ArticlesLiked}}
+    <p>Liked:</p>
+    {{range .ArticlesLiked}}
     <a href="/bloggers/{{ .BloggerId }}/{{ .ArticleId }}/liked">
         <h3>{{.Title}}</h3>
     </a>
@@ -18,18 +19,18 @@
         {{.ArticleMessage}}
     </div>
     <p>{{.Date}}</p>
-{{end}}
+    {{end}}
 
-<p style="margin-left:20px;">Not liked:</p>
-{{range .ArticlesNotLiked}}
+    <p>Not liked:</p>
+    {{range .ArticlesNotLiked}}
     <a href="/bloggers/{{ .BloggerId }}/{{ .ArticleId }}">
         <h3>{{.Title}}</h3>
     </a>
     <div>
         {{.ArticleMessage}}
     </div>
-<p>{{.Date}}</p>
-{{end}}
-
+    <p>{{.Date}}</p>
+    {{end}}
+</div>
 
 {{template "footer.html" .}}

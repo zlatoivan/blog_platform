@@ -1,25 +1,27 @@
 {{template "header.html" .}}
 {{template "navbar.html" .}}
 
-<p style="margin-left:20px;">News:</p>
+<div class="container">
+    <h1>News</h1>
 
-{{range .}}
+    {{range .}}
     <h2>
         {{ .Blogger.Login }} ({{ .Blogger.Name }} {{ .Blogger.Surname }}, {{ .Blogger.Country }})
     </h2>
 
     {{if eq (len .Articles) 0}}
-        No articles. Blogger is modest...
+    No articles. Blogger is modest...
     {{end}}
     {{range .Articles}}
-        <a href="/bloggers/{{ .ArticleId }}/{{ .BloggerId }}">
-            <h3>{{.Title}}</h3>
-        </a>
-        <div>
-            {{.ArticleMessage}}
-        </div>
-        <p>{{.Date}}</p>
+    <a href="/bloggers/{{ .BloggerId }}/{{ .ArticleId }}">
+        <h3>{{.Title}}</h3>
+    </a>
+    <div>
+        {{.ArticleMessage}}
+    </div>
+    <p>{{.Date}}</p>
     {{end}}
-{{end}}
+    {{end}}
+</div>
 
 {{template "footer.html" .}}

@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"slices"
 	_ "slices"
+	"time"
 )
 
 type DB struct {
@@ -89,7 +90,7 @@ const createTablesConst string = `
 		BloggerId INTEGER NOT NULL,
 		Title NVARCHAR NOT NULL,
 		ArticleMessage NVARCHAR NOT NULL,
-		Date DATETIME NOT NULL,
+		Date NVARCHAR NOT NULL,
 		FOREIGN KEY(BloggerId) REFERENCES Blogger(BloggerId) ON DELETE CASCADE ON UPDATE CASCADE
 	);
 
@@ -148,7 +149,7 @@ func (d *DB) InsertBlogger(b *Blogger) {
 const insertArticleConst = `INSERT INTO Article VALUES(NULL, ?, ?, ?, ?);`
 
 func (d *DB) InsertArticle(p *Article) int64 {
-	lastPost, err := d.Database.Exec(insertArticleConst, p.BloggerId, p.Title, p.ArticleMessage, p.Date)
+	lastPost, err := d.Database.Exec(insertArticleConst, p.BloggerId, p.Title, p.ArticleMessage, time.Now())
 	if err != nil {
 		d.Logger.Fatal(err)
 	}

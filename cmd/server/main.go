@@ -3,13 +3,50 @@ package main
 import (
 	"blog-platform/internal/api"
 	"blog-platform/internal/dbPkg"
-	"github.com/go-chi/chi/v5/middleware"
-
 	"fmt"
 	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 	"log"
 	"net/http"
+	"os"
+	"path/filepath"
+	"strings"
 )
+
+// FileServer is serving static files. | https://github.com/go-chi/chi/issues/403
+func FileServer(router *chi.Mux) {
+	root := "./"
+	fs := http.FileServer(http.Dir(root))
+
+	router.Get("/*", func(w http.ResponseWriter, r *http.Request) {
+		if _, err := os.Stat(root + r.RequestURI); os.IsNotExist(err) {
+			http.StripPrefix(r.RequestURI, fs).ServeHTTP(w, r)
+		} else {
+			fs.ServeHTTP(w, r)
+		}
+	})
+}
+
+// FileServer conveniently sets up a http.FileServer handler to serve
+// static files from a http.FileSystem.
+func FileServer2(r chi.Router, path string, root http.FileSystem) {
+	if strings.ContainsAny(path, "{}*") {
+		panic("FileServer does not permit any URL parameters.")
+	}
+
+	if path != "/" && path[len(path)-1] != '/' {
+		r.Get(path, http.RedirectHandler(path+"/", 301).ServeHTTP)
+		path += "/"
+	}
+	path += "*"
+
+	r.Get(path, func(w http.ResponseWriter, r *http.Request) {
+		rctx := chi.RouteContext(r.Context())
+		pathPrefix := strings.TrimSuffix(rctx.RoutePattern(), "/*")
+		fs := http.StripPrefix(pathPrefix, http.FileServer(root))
+		fs.ServeHTTP(w, r)
+	})
+}
 
 func main() {
 	fmt.Print("\nStart\n\n")
@@ -28,6 +65,11 @@ func main() {
 	a := api.Api{
 		Db: &db,
 	}
+
+	//FileServer(r)
+	workDir, _ := os.Getwd()
+	filesDir := http.Dir(filepath.Join(workDir, "/"))
+	FileServer2(r, "/", filesDir)
 
 	r.Get("/register", a.GetRegister)
 	r.Post("/register", a.PostRegister)
@@ -50,10 +92,12 @@ func main() {
 				r.Get("/subscribed", a.GetBloggerSubscribed)
 				r.Post("/subscribed", a.PostBloggerSubscribed)
 
-				r.Get("/{articleId}", a.GetBloggerArticle)
-				r.Post("/{articleId}", a.PostBloggerArticle)
-				r.Get("/{articleId}/liked", a.GetBloggerArticleLiked)
-				r.Post("/{articleId}/liked", a.PostBloggerArticleLiked)
+				r.Route("/{articleId}", func(r chi.Router) {
+					r.Get("/", a.GetBloggerArticle)
+					r.Post("/", a.PostBloggerArticle)
+					r.Get("/liked", a.GetBloggerArticleLiked)
+					r.Post("/liked", a.PostBloggerArticleLiked)
+				})
 			})
 		})
 

@@ -1,18 +1,22 @@
 {{template "header.html" .}}
 {{template "navbar.html" .}}
 
-<p style="margin-left:20px;">Subscriptions</p>
-{{range .BloggersSub}}
+<div class="container">
+    <h1>Bloggers</h1>
+
+    <h3>Subscriptions</h3>
+    {{range .BloggersSub}}
     <a href="/bloggers/{{ .BloggerId }}/subscribed">
         <p>{{ .Login }} ({{ .Name }} {{ .Surname }}, {{ .Country }})</p>
     </a>
-{{end}}
+    {{end}}
 
-<p style="margin-left:20px;">Not subscriptions</p>
-{{range .BloggersNotSub}}
+    <h3>Not subscriptions</h3>
+    {{range .BloggersNotSub}}
     <a href="/bloggers/{{ .BloggerId }}">
         <p>{{ .Login }} ({{ .Name }} {{ .Surname }}, {{ .Country }})</p>
     </a>
-{{end}}
+    {{end}}
+</div>
 
 {{template "footer.html" .}}

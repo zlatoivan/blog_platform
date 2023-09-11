@@ -1,19 +1,22 @@
 {{template "header.html" .}}
 {{template "navbar.html" .}}
 
-<h2>
-    {{ .Blogger.Login }} ({{ .Blogger.Name }} {{ .Blogger.Surname }}, {{ .Blogger.Country }})
-</h2>
+<div class="container">
+    <h1>Profile</h1>
+    <h2>
+        {{ .Blogger.Login }} ({{ .Blogger.Name }} {{ .Blogger.Surname }}, {{ .Blogger.Country }})
+    </h2>
 
-{{if eq (len .Articles) 0}}
+    {{if eq (len .Articles) 0}}
     No articles. Create the first!
-{{end}}
-{{range .Articles}}
+    {{end}}
+    {{range .Articles}}
     <h3>{{.Title}}</h3>
     <div>
         {{.ArticleMessage}}
     </div>
     <p>{{.Date}}</p>
-{{end}}
+    {{end}}
+</div>
 
 {{template "footer.html" .}}

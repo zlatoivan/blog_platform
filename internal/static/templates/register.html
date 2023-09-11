@@ -1,14 +1,25 @@
 {{template "header.html" .}}
 
-<form method="post">
-    Email <input type="text" name="email" value="zlatoivan@gmail.com"> <br>
-    Password <input type="text" name="password" value="123"> <br><br>
+<div class="container">
+    <h1>Register</h1>
+    <p>Please fill in this form to create an account.</p>
+    <hr>
 
-    Login <input type="text" name="login" value="dovolniy"> <br>
-    Name <input type="text" name="name" value="Ivan"> <br>
-    Surname <input type="text" name="surname" value="Zlatovratskiy"> <br>
-    Country <input type="text" name="country" value="Russia"> <br>
-    <button type="submit">Register</button>
-</form>
+    <form method="post">
+        Email <input type="text" name="email" value="zlatoivan@gmail.com"> <br>
+        Password <input type="text" name="password" value="123"> <br><br>
+
+        Login <input type="text" name="login" value=""> <br>
+        Name <input type="text" name="name" value=""> <br>
+        Surname <input type="text" name="surname" value=""> <br>
+        Country <input type="text" name="country" value="Russia"> <br>
+        <hr>
+        <button type="submit">Register</button>
+    </form>
+</div>
+
+<div class="container center backgrey">
+    <p>Already have an account? <a href="/login">Login</a></p>
+</div>
 
 {{template "footer.html" .}}
