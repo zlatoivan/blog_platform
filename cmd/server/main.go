@@ -34,7 +34,7 @@ func FileServer2(r chi.Router, path string, root http.FileSystem) {
 		panic("FileServer does not permit any URL parameters.")
 	}
 
-	if path != "/" && path[len(path)-1] != '/' {
+	if path != "/internal/static" && path[len(path)-1] != '/' {
 		r.Get(path, http.RedirectHandler(path+"/", 301).ServeHTTP)
 		path += "/"
 	}
@@ -66,10 +66,18 @@ func main() {
 		Db: &db,
 	}
 
+	////////////////////////////////////////////////////////////////////
 	//FileServer(r)
+
 	workDir, _ := os.Getwd()
 	filesDir := http.Dir(filepath.Join(workDir, "/"))
 	FileServer2(r, "/", filesDir)
+
+	//_ = mime.AddExtensionType(".js", "text/javascript")
+
+	//fs := http.FileServer(http.Dir("static"))
+	//r.Handle("/static/*", http.StripPrefix("/static/", fs))
+	////////////////////////////////////////////////////////////////////
 
 	r.Get("/register", a.GetRegister)
 	r.Post("/register", a.PostRegister)
@@ -83,23 +91,12 @@ func main() {
 
 		r.Get("/", a.GetSubsArticles)
 
-		r.Route("/bloggers", func(r chi.Router) {
-			r.Get("/", a.GetBloggers)
-			r.Route("/{bloggerId}", func(r chi.Router) {
-				//r.Use(a.BloggerViewCtx)
-				r.Get("/", a.GetBlogger)
-				r.Post("/", a.PostBlogger)
-				r.Get("/subscribed", a.GetBloggerSubscribed)
-				r.Post("/subscribed", a.PostBloggerSubscribed)
-
-				r.Route("/{articleId}", func(r chi.Router) {
-					r.Get("/", a.GetBloggerArticle)
-					r.Post("/", a.PostBloggerArticle)
-					r.Get("/liked", a.GetBloggerArticleLiked)
-					r.Post("/liked", a.PostBloggerArticleLiked)
-				})
-			})
-		})
+		//r.Route("", func(r chi.Router) {
+		r.Get("/bloggers", a.GetBloggers)
+		//r.Use(a.BloggerViewCtx)
+		r.Get("/bloggers/{bloggerId}", a.GetBlogger)
+		r.Get("/bloggers/{bloggerId}/{articleId}", a.GetBloggerArticle)
+		//})
 
 		r.Get("/logout", a.GetLogout)
 
@@ -107,6 +104,11 @@ func main() {
 
 		r.Get("/insert", a.GetInsertArticle)
 		r.Post("/insert", a.PostInsertArticle)
+
+		r.Post("/someoneIsLiked", a.SomeoneIsLiked)
+		r.Post("/showLikes", a.ShowLikes)
+		r.Post("/someoneIsSubscribed", a.SomeoneIsSubscribed)
+		r.Post("/showSubscriptions", a.ShowSubscriptions)
 	})
 
 	fmt.Println("Listening on http://localhost:3333/...")
@@ -115,11 +117,6 @@ func main() {
 }
 
 //
-//r.Get("/bloggers", a.GetBloggers)
-//r.Get("/bloggers/{bloggerId}", a.GetBlogger)
-//r.Post("/bloggers/{bloggerId}", a.PostBlogger)
-//r.Get("/bloggers/{bloggerId}/subscribed", a.GetBloggerSubscribed)
-//r.Post("/bloggers/{bloggerId}/subscribed", a.PostBloggerSubscribed)
 
 //r.Route("/articles", func(r chi.Router) {
 //	r.Get("/", a.GetInsertArticle)     // +

@@ -1,22 +1,19 @@
 {{template "header.html" .}}
 {{template "navbar.html" .}}
 
-<div class="container">
-    <h1>Profile</h1>
-    <h2>
-        {{ .Blogger.Login }} ({{ .Blogger.Name }} {{ .Blogger.Surname }}, {{ .Blogger.Country }})
-    </h2>
+<h1>Profile</h1>
+<h2>{{ .Blogger.Login }} ({{ .Blogger.Name }} {{ .Blogger.Surname }}, {{ .Blogger.Country }})</h2>
 
-    {{if eq (len .Articles) 0}}
+{{if eq (len .Articles) 0}}
     No articles. Create the first!
-    {{end}}
-    {{range .Articles}}
-    <h3>{{.Title}}</h3>
-    <div>
-        {{.ArticleMessage}}
+{{end}}
+{{range .Articles}}
+    <div class="container">
+        <h3><a href="/bloggers/{{ .BloggerId }}/{{ .ArticleId }}">{{.Title}}</a></h3>
+        <p>{{.ArticleMessage}}</p>
+        <p>{{.Date}}</p>
     </div>
-    <p>{{.Date}}</p>
-    {{end}}
-</div>
+    <br>
+{{end}}
 
 {{template "footer.html" .}}

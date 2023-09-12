@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"slices"
 	_ "slices"
-	"time"
 )
 
 type DB struct {
@@ -55,7 +54,7 @@ type Subscriptions struct {
 }
 
 func (d *DB) InitDB() {
-	db, err := sql.Open("sqlite3", "/home/ivan/GolandProjects/blog-platform/internal/dbPkg/data.sqlite")
+	db, err := sql.Open("sqlite3", "internal/dbPkg/data.sqlite")
 	if err != nil {
 		d.Logger.Fatal(err) // Logger можно настроить и насройки изменятся во всей программе (инъекция зависимости!)
 	}
@@ -148,8 +147,9 @@ func (d *DB) InsertBlogger(b *Blogger) {
 // Insert Article
 const insertArticleConst = `INSERT INTO Article VALUES(NULL, ?, ?, ?, ?);`
 
-func (d *DB) InsertArticle(p *Article) int64 {
-	lastPost, err := d.Database.Exec(insertArticleConst, p.BloggerId, p.Title, p.ArticleMessage, time.Now())
+func (d *DB) InsertArticle(a *Article) int64 {
+	fmt.Println(a.Date)
+	lastPost, err := d.Database.Exec(insertArticleConst, a.BloggerId, a.Title, a.ArticleMessage, a.Date)
 	if err != nil {
 		d.Logger.Fatal(err)
 	}
@@ -398,6 +398,29 @@ func (d *DB) IsLiked(bloggerId int, articleId int) bool {
 	}
 	fmt.Println("isLiked", isLiked)
 	if isLiked == 0 {
+		return false
+	} else {
+		return true
+	}
+}
+
+const selectIsSubscribed = `SELECT COUNT(*) FROM Subscriptions WHERE BloggerId = ? AND BloggerIdSub = ?;`
+
+func (d *DB) IsSubscribed(bloggerId int, articleId int) bool {
+	rows, err := d.Database.Query(selectIsSubscribed, bloggerId, articleId)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer rows.Close()
+
+	var isSubscribed int
+	for rows.Next() {
+		err = rows.Scan(&isSubscribed)
+		if err != nil {
+			d.Logger.Fatal(err)
+		}
+	}
+	if isSubscribed == 0 {
 		return false
 	} else {
 		return true

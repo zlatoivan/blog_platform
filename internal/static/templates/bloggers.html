@@ -6,7 +6,7 @@
 
     <h3>Subscriptions</h3>
     {{range .BloggersSub}}
-    <a href="/bloggers/{{ .BloggerId }}/subscribed">
+    <a href="/bloggers/{{ .BloggerId }}">
         <p>{{ .Login }} ({{ .Name }} {{ .Surname }}, {{ .Country }})</p>
     </a>
     {{end}}
