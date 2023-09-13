@@ -3,6 +3,9 @@
 
 <h1>News</h1>
 
+{{if eq (len .) 0}}
+    No articles. Subscribe on bloggers!
+{{end}}
 {{range .}}
     <div class="container">
         <h2><a href="/bloggers/{{ .Blogger.BloggerId }}/{{ .Article.ArticleId }}">

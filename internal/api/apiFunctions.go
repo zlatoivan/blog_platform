@@ -95,7 +95,6 @@ func (a *Api) CheckAuth(next http.Handler) http.Handler {
 
 		if blogger == nil { // Не происходит, так как /logout сразу переводит на /login
 			http.Redirect(w, r, "/login", http.StatusFound)
-			next.ServeHTTP(w, r)
 		} else {
 			ctx := context.WithValue(r.Context(), "blogger", blogger)
 			next.ServeHTTP(w, r.WithContext(ctx))
@@ -185,12 +184,37 @@ func getBloggerFromCtx(ctx context.Context) *dbPkg.Blogger {
 func (a *Api) GetProfile(w http.ResponseWriter, r *http.Request) {
 	blogger := getBloggerFromCtx(r.Context())
 	articles := a.Db.GetArticlesByBloggerId(blogger.BloggerId)
+
+	articleForms := make([]struct {
+		Article     *dbPkg.Article
+		Likes       int
+		CommentsCnt int
+	}, 0)
+	for _, article := range articles {
+		likes := a.Db.GetLikesCntByArticleId(article.ArticleId)
+		commentsCnt := len(a.Db.GetCommentsByArticleId(article.ArticleId))
+		dataElem := struct {
+			Article     *dbPkg.Article
+			Likes       int
+			CommentsCnt int
+		}{
+			Article:     article,
+			Likes:       likes,
+			CommentsCnt: commentsCnt,
+		}
+		articleForms = append(articleForms, dataElem)
+	}
+
 	data := struct {
-		Blogger  *dbPkg.Blogger
-		Articles []*dbPkg.Article
+		Blogger      *dbPkg.Blogger
+		ArticleForms []struct {
+			Article     *dbPkg.Article
+			Likes       int
+			CommentsCnt int
+		}
 	}{
-		Blogger:  blogger,
-		Articles: articles,
+		Blogger:      blogger,
+		ArticleForms: articleForms,
 	}
 
 	t, err := template.ParseFiles(profileHtmlPath, headerHtmlPath, footerHtmlPath, navbarHtmlPath)
@@ -226,7 +250,7 @@ func (a *Api) PostInsertArticle(w http.ResponseWriter, r *http.Request) {
 
 	a.Db.InsertArticle(article)
 
-	http.Redirect(w, r, "/", http.StatusFound)
+	http.Redirect(w, r, "/profile", http.StatusFound)
 }
 
 func (a *Api) GetBloggers(w http.ResponseWriter, r *http.Request) {
@@ -283,21 +307,21 @@ func (a *Api) GetBlogger(w http.ResponseWriter, r *http.Request) {
 	articles := a.Db.GetArticlesByBloggerId(bloggerId)
 
 	articleForms := make([]struct {
-		Article *dbPkg.Article
-		Likes   int
-		//Comments *dbPkg.Comment
+		Article     *dbPkg.Article
+		Likes       int
+		CommentsCnt int
 	}, 0)
 	for _, article := range articles {
 		likes := a.Db.GetLikesCntByArticleId(article.ArticleId)
-		//comme
+		commentsCnt := len(a.Db.GetCommentsByArticleId(article.ArticleId))
 		dataElem := struct {
-			Article *dbPkg.Article
-			Likes   int
-			//Comments *dbPkg.Comment
+			Article     *dbPkg.Article
+			Likes       int
+			CommentsCnt int
 		}{
-			Article: article,
-			Likes:   likes,
-			//Comments: comments,
+			Article:     article,
+			Likes:       likes,
+			CommentsCnt: commentsCnt,
 		}
 		articleForms = append(articleForms, dataElem)
 	}
@@ -305,9 +329,9 @@ func (a *Api) GetBlogger(w http.ResponseWriter, r *http.Request) {
 	data := struct {
 		Blogger      *dbPkg.Blogger
 		ArticleForms []struct {
-			Article *dbPkg.Article
-			Likes   int
-			//Comments *dbPkg.Comment
+			Article     *dbPkg.Article
+			Likes       int
+			CommentsCnt int
 		}
 	}{
 		Blogger:      blogger,
