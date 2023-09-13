@@ -96,6 +96,7 @@ func main() {
 		//r.Use(a.BloggerViewCtx)
 		r.Get("/bloggers/{bloggerId}", a.GetBlogger)
 		r.Get("/bloggers/{bloggerId}/{articleId}", a.GetBloggerArticle)
+		r.Post("/bloggers/{bloggerId}/{articleId}", a.PostBloggerArticle)
 		//})
 
 		r.Get("/logout", a.GetLogout)

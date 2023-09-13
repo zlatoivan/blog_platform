@@ -39,7 +39,7 @@ type Comment struct {
 	CommentId      int
 	BloggerId      int
 	ArticleId      int
-	CommentMessage string
+	CommentMessage template.HTML
 	Date           string
 }
 
@@ -104,7 +104,7 @@ const createTablesConst string = `
 		BloggerId INTEGER NOT NULL,
 		ArticleId INTEGER NOT NULL,
 		CommentMessage NVARCHAR NOT NULL,
-		Date DATETIME NOT NULL,
+		Date NVARCHAR NOT NULL,
 		FOREIGN KEY(BloggerId) REFERENCES Blogger(BloggerId) ON DELETE CASCADE,
 		FOREIGN KEY(ArticleId) REFERENCES Article(ArticleId) ON DELETE CASCADE
 	);
@@ -161,8 +161,8 @@ func (d *DB) InsertArticle(a *Article) int64 {
 // Insert Comment
 const insertCommentConst = `INSERT INTO Comment VALUES(NULL, ?, ?, ?, ?);`
 
-func (d *DB) insertComment(bloggerId int, articleId int, commentMessage string, date string) {
-	_, err := d.Database.Exec(insertCommentConst, bloggerId, articleId, commentMessage, date)
+func (d *DB) InsertComment(c *Comment) {
+	_, err := d.Database.Exec(insertCommentConst, c.BloggerId, c.ArticleId, c.CommentMessage, c.Date)
 	if err != nil {
 		d.Logger.Fatal(err)
 	}
@@ -396,7 +396,6 @@ func (d *DB) IsLiked(bloggerId int, articleId int) bool {
 			d.Logger.Fatal(err)
 		}
 	}
-	fmt.Println("isLiked", isLiked)
 	if isLiked == 0 {
 		return false
 	} else {
@@ -516,7 +515,6 @@ func (d *DB) GetLikedAndNotLiked(bloggerId int, bloggerIdCur int) ([]*Article, [
 	defer rows.Close()
 
 	liked := d.GetLikedByBloggerId(bloggerIdCur)
-	fmt.Println("liked id:", liked)
 	articlesNotLiked := make([]*Article, 0)
 	articlesLiked := make([]*Article, 0)
 	for rows.Next() {
@@ -564,6 +562,33 @@ func (d *DB) GetBloggerByBloggerId(bloggerId int) *Blogger {
 		return blogger
 	}
 	return nil
+}
+
+const selectComments = `SELECT * FROM Comment WHERE ArticleId = ?`
+
+func (d *DB) GetCommentsByArticleId(articleId int) []*Comment {
+	rows, err := d.Database.Query(selectComments, articleId)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer rows.Close()
+
+	comments := make([]*Comment, 0)
+	for rows.Next() {
+		data := new(Comment)
+		err = rows.Scan(
+			&data.CommentId,
+			&data.BloggerId,
+			&data.ArticleId,
+			&data.CommentMessage,
+			&data.Date,
+		)
+		if err != nil {
+			log.Fatal(err)
+		}
+		comments = append(comments, data)
+	}
+	return comments
 }
 
 // ---------------------------------------------------------------------------------------------------

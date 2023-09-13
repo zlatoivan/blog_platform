@@ -17,7 +17,7 @@
             <h3>{{.Article.Title}}</h3>
         </a>
         <p>{{.Article.ArticleMessage}}</p>
-        <p>{{.Article.Date}}</p>
+        <p class="datetime">{{.Article.Date}}</p>
 
         <label id="articleIdLabel={{ .Article.ArticleId }}">{{.Likes}}</label>
         <a class="like-button" id="articleIdButton={{ .Article.ArticleId }}" onclick="likeOnClick({{ .Article.ArticleId }})">
@@ -145,6 +145,10 @@
 
 
 <style>
+
+    .datetime {
+        color: grey;
+    }
     body {
         font-family: Arial, Helvetica, sans-serif;
         background: #edeef0;

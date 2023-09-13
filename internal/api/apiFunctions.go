@@ -34,6 +34,7 @@ const bloggerProfileHtmlPath = "internal/static/templates/bloggerProfile.html"
 const bloggerArticleHtmlPath = "internal/static/templates/bloggerArticle.html"
 
 func (a *Api) GetSubsArticles(w http.ResponseWriter, r *http.Request) {
+	fmt.Print("-----------------------------------\n\n\n\n\n")
 	bloggerId := getBloggerFromCtx(r.Context()).BloggerId
 	subs, _ := a.Db.GetSubsAndNotSubs(bloggerId)
 
@@ -49,25 +50,25 @@ func (a *Api) GetSubsArticles(w http.ResponseWriter, r *http.Request) {
 	})
 
 	data := make([]struct {
-		Blogger *dbPkg.Blogger
-		Article *dbPkg.Article
-		Likes   int
-		//Comments *dbPkg.Comment
+		Blogger     *dbPkg.Blogger
+		Article     *dbPkg.Article
+		Likes       int
+		CommentsCnt int
 	}, 0)
 	for _, article := range articles {
 		blogger := a.Db.GetBloggerByBloggerId(article.BloggerId)
 		likes := a.Db.GetLikesCntByArticleId(article.ArticleId)
-		//comme
+		commentsCnt := len(a.Db.GetCommentsByArticleId(article.ArticleId))
 		articleForm := struct {
-			Blogger *dbPkg.Blogger
-			Article *dbPkg.Article
-			Likes   int
-			//Comments *dbPkg.Comment
+			Blogger     *dbPkg.Blogger
+			Article     *dbPkg.Article
+			Likes       int
+			CommentsCnt int
 		}{
-			Blogger: blogger,
-			Article: article,
-			Likes:   likes,
-			//Comments: comments,
+			Blogger:     blogger,
+			Article:     article,
+			Likes:       likes,
+			CommentsCnt: commentsCnt,
 		}
 		data = append(data, articleForm)
 	}
@@ -222,7 +223,6 @@ func (a *Api) PostInsertArticle(w http.ResponseWriter, r *http.Request) {
 		ArticleMessage: template.HTML(r.FormValue("articleMessage")),
 		Date:           time.Now().Format("02.01.2006, 15:04:05"),
 	}
-	fmt.Println(article.Date)
 
 	a.Db.InsertArticle(article)
 
@@ -314,7 +314,6 @@ func (a *Api) GetBlogger(w http.ResponseWriter, r *http.Request) {
 		ArticleForms: articleForms,
 	}
 
-	fmt.Println("Before template")
 	t, err := template.ParseFiles(bloggerProfileHtmlPath, headerHtmlPath, footerHtmlPath, navbarHtmlPath)
 	if err != nil {
 		log.Fatal(err) //a.Db.Logger.Fatal(err)
@@ -324,6 +323,166 @@ func (a *Api) GetBlogger(w http.ResponseWriter, r *http.Request) {
 		log.Fatal(err) //a.Db.Logger.Fatal(err)
 	}
 }
+
+func (a *Api) GetBloggerArticle(w http.ResponseWriter, r *http.Request) {
+	articleIdFromURL := chi.URLParam(r, "articleId")
+	articleId, _ := strconv.Atoi(articleIdFromURL)
+	article := a.Db.GetArticleByArticleId(articleId)
+	likesCnt := a.Db.GetLikesCntByArticleId(articleId)
+	comments := a.Db.GetCommentsByArticleId(articleId)
+	commentsCnt := len(comments)
+	sort.Slice(comments, func(i, j int) bool {
+		return comments[i].Date > comments[j].Date
+	})
+	fmt.Println(likesCnt, commentsCnt)
+
+	commentsForms := make([]struct {
+		Blogger *dbPkg.Blogger
+		Comment *dbPkg.Comment
+	}, 0)
+	for _, comment := range comments {
+		dataElem := struct {
+			Blogger *dbPkg.Blogger
+			Comment *dbPkg.Comment
+		}{
+			Blogger: a.Db.GetBloggerByBloggerId(comment.BloggerId),
+			Comment: comment,
+		}
+		commentsForms = append(commentsForms, dataElem)
+	}
+
+	data := struct {
+		Article       *dbPkg.Article
+		LikesCnt      int
+		CommentsCnt   int
+		CommentsForms []struct {
+			Blogger *dbPkg.Blogger
+			Comment *dbPkg.Comment
+		}
+	}{
+		Article:       article,
+		LikesCnt:      likesCnt,
+		CommentsForms: commentsForms,
+		CommentsCnt:   commentsCnt,
+	}
+
+	t, err := template.ParseFiles(bloggerArticleHtmlPath, headerHtmlPath, footerHtmlPath, navbarHtmlPath)
+	if err != nil {
+		log.Fatal(err) //a.Db.Logger.Fatal(err)
+	}
+	err = t.Execute(w, data)
+	if err != nil {
+		log.Fatal(err) //a.Db.Logger.Fatal(err)
+	}
+}
+
+func (a *Api) PostBloggerArticle(w http.ResponseWriter, r *http.Request) {
+	bloggerId := getBloggerFromCtx(r.Context()).BloggerId
+	articleIdFromURL := chi.URLParam(r, "articleId")
+	articleId, _ := strconv.Atoi(articleIdFromURL)
+
+	comment := &dbPkg.Comment{
+		BloggerId:      bloggerId,
+		ArticleId:      articleId,
+		CommentMessage: template.HTML(r.FormValue("commentMessage")),
+		Date:           time.Now().Format("02.01.2006, 15:04:05"),
+	}
+
+	a.Db.InsertComment(comment)
+
+	http.Redirect(w, r, "/bloggers/"+chi.URLParam(r, "bloggerId")+"/"+articleIdFromURL+"#", http.StatusFound)
+}
+
+type ArticleDataInput struct {
+	ArticleId int
+}
+
+type ArticleDataOutput struct {
+	LikesCnt int
+	IsLiked  bool
+}
+
+func (a *Api) SomeoneIsLiked(w http.ResponseWriter, r *http.Request) {
+	bloggerId := getBloggerFromCtx(r.Context()).BloggerId
+	var data ArticleDataInput
+	_ = json.NewDecoder(r.Body).Decode(&data)
+	articleId := data.ArticleId
+
+	isLiked := a.Db.IsLiked(bloggerId, articleId)
+	if isLiked {
+		a.Db.DeleteLike(bloggerId, articleId)
+	} else {
+		a.Db.InsertLike(bloggerId, articleId)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(ArticleDataOutput{
+		LikesCnt: a.Db.GetLikesCntByArticleId(articleId),
+		IsLiked:  !isLiked,
+	})
+}
+
+type IsLikedOutput struct {
+	IsLiked bool
+}
+
+func (a *Api) ShowLikes(w http.ResponseWriter, r *http.Request) {
+	bloggerId := getBloggerFromCtx(r.Context()).BloggerId
+	var data ArticleDataInput
+	_ = json.NewDecoder(r.Body).Decode(&data)
+	articleId := data.ArticleId
+
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(IsLikedOutput{
+		IsLiked: a.Db.IsLiked(bloggerId, articleId),
+	})
+}
+
+type SubDataInput struct {
+	BloggerId int
+}
+
+type SubDataOutput struct {
+	IsSubscribed bool
+}
+
+func (a *Api) SomeoneIsSubscribed(w http.ResponseWriter, r *http.Request) {
+	bloggerIdCur := getBloggerFromCtx(r.Context()).BloggerId
+	var data SubDataInput
+	_ = json.NewDecoder(r.Body).Decode(&data)
+	bloggerId := data.BloggerId
+
+	isSubscribed := a.Db.IsSubscribed(bloggerIdCur, bloggerId)
+	if isSubscribed {
+		a.Db.DeleteSubscription(bloggerIdCur, bloggerId)
+	} else {
+		a.Db.InsertSubscription(bloggerIdCur, bloggerId)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(SubDataOutput{
+		IsSubscribed: !isSubscribed,
+	})
+}
+
+func (a *Api) ShowSubscriptions(w http.ResponseWriter, r *http.Request) {
+	bloggerIdCur := getBloggerFromCtx(r.Context()).BloggerId
+	var data SubDataInput
+	_ = json.NewDecoder(r.Body).Decode(&data)
+	bloggerId := data.BloggerId
+
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(SubDataOutput{
+		IsSubscribed: a.Db.IsSubscribed(bloggerIdCur, bloggerId),
+	})
+}
+
+//func Logger(next http.Handler) http.Handler {
+//	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+//		log.Println(r.URL.Path)
+//		next.ServeHTTP(w, r)
+//	})
+//}
 
 //
 //func (a *Api) PostBlogger(w http.ResponseWriter, r *http.Request) {
@@ -383,30 +542,6 @@ func (a *Api) GetBlogger(w http.ResponseWriter, r *http.Request) {
 //	http.Redirect(w, r, "/bloggers/"+strconv.Itoa(bloggerViewId), http.StatusFound)
 //}
 
-func (a *Api) GetBloggerArticle(w http.ResponseWriter, r *http.Request) {
-	articleIdFromURL := chi.URLParam(r, "articleId")
-	articleId, _ := strconv.Atoi(articleIdFromURL)
-	article := a.Db.GetArticleByArticleId(articleId)
-	likesCnt := a.Db.GetLikesCntByArticleId(articleId)
-
-	data := struct {
-		Article  *dbPkg.Article
-		LikesCnt int
-	}{
-		Article:  article,
-		LikesCnt: likesCnt,
-	}
-
-	t, err := template.ParseFiles(bloggerArticleHtmlPath, headerHtmlPath, footerHtmlPath, navbarHtmlPath)
-	if err != nil {
-		log.Fatal(err) //a.Db.Logger.Fatal(err)
-	}
-	err = t.Execute(w, data)
-	if err != nil {
-		log.Fatal(err) //a.Db.Logger.Fatal(err)
-	}
-}
-
 //func (a *Api) PostBloggerArticle(w http.ResponseWriter, r *http.Request) {
 //	bloggerId := getBloggerFromCtx(r.Context()).BloggerId
 //	articleIdFromURL := chi.URLParam(r, "articleId")
@@ -460,97 +595,4 @@ func (a *Api) GetBloggerArticle(w http.ResponseWriter, r *http.Request) {
 //	bloggerIdFromURL := chi.URLParam(r, "bloggerId")
 //
 //	http.Redirect(w, r, "/bloggers/"+bloggerIdFromURL+"/"+articleIdFromURL, http.StatusFound)
-//}
-
-type ArticleDataInput struct {
-	ArticleId int
-}
-
-type ArticleDataOutput struct {
-	LikesCnt int
-	IsLiked  bool
-}
-
-func (a *Api) SomeoneIsLiked(w http.ResponseWriter, r *http.Request) {
-	bloggerId := getBloggerFromCtx(r.Context()).BloggerId
-	var data ArticleDataInput
-	_ = json.NewDecoder(r.Body).Decode(&data)
-	articleId := data.ArticleId
-	fmt.Println(articleId, "is liked!")
-
-	isLiked := a.Db.IsLiked(bloggerId, articleId)
-	if isLiked {
-		a.Db.DeleteLike(bloggerId, articleId)
-	} else {
-		a.Db.InsertLike(bloggerId, articleId)
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(ArticleDataOutput{
-		LikesCnt: a.Db.GetLikesCntByArticleId(articleId),
-		IsLiked:  !isLiked,
-	})
-}
-
-type IsLikedOutput struct {
-	IsLiked bool
-}
-
-func (a *Api) ShowLikes(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("IN showLikes")
-	bloggerId := getBloggerFromCtx(r.Context()).BloggerId
-	var data ArticleDataInput
-	_ = json.NewDecoder(r.Body).Decode(&data)
-	articleId := data.ArticleId
-
-	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(IsLikedOutput{
-		IsLiked: a.Db.IsLiked(bloggerId, articleId),
-	})
-}
-
-type SubDataInput struct {
-	BloggerId int
-}
-
-type SubDataOutput struct {
-	IsSubscribed bool
-}
-
-func (a *Api) SomeoneIsSubscribed(w http.ResponseWriter, r *http.Request) {
-	bloggerIdCur := getBloggerFromCtx(r.Context()).BloggerId
-	var data SubDataInput
-	_ = json.NewDecoder(r.Body).Decode(&data)
-	bloggerId := data.BloggerId
-
-	isSubscribed := a.Db.IsSubscribed(bloggerIdCur, bloggerId)
-	if isSubscribed {
-		a.Db.DeleteSubscription(bloggerIdCur, bloggerId)
-	} else {
-		a.Db.InsertSubscription(bloggerIdCur, bloggerId)
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(SubDataOutput{
-		IsSubscribed: !isSubscribed,
-	})
-}
-
-func (a *Api) ShowSubscriptions(w http.ResponseWriter, r *http.Request) {
-	bloggerIdCur := getBloggerFromCtx(r.Context()).BloggerId
-	var data SubDataInput
-	_ = json.NewDecoder(r.Body).Decode(&data)
-	bloggerId := data.BloggerId
-
-	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(SubDataOutput{
-		IsSubscribed: a.Db.IsSubscribed(bloggerIdCur, bloggerId),
-	})
-}
-
-//func Logger(next http.Handler) http.Handler {
-//	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-//		log.Println(r.URL.Path)
-//		next.ServeHTTP(w, r)
-//	})
 //}

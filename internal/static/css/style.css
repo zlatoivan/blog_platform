@@ -39,17 +39,14 @@ button {
     text-align: center;
 }
 
-.backgrey {
-    background-color: #f1f1f1;
-}
-
 a {
     color: dodgerblue;
 }
 
 .navbar {
     display: flex;
-    justify-content: space-between;
+    justify-content: space-around;
+    /*justify-content: space-between;*/
 }
 
 .like-button svg path {
@@ -58,4 +55,8 @@ a {
 }
 .like-button.active svg path {
     fill: #2196f3;
+}
+
+.datetime {
+    color: grey;
 }
