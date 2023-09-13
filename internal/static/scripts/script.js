@@ -54,3 +54,55 @@ function likeOnClick(articleId) {
         console.log(error)
     });
 }
+
+function showSubscriptions(bloggerId) {
+    let data = {
+        BloggerId: bloggerId,
+    };
+    fetch("/showSubscriptions", {
+        headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+        },
+        method: "POST",
+        body: JSON.stringify(data)
+    }).then((response) => {
+        response.text().then(function (data) {
+            let result = JSON.parse(data);
+            const btn = document.getElementById('bloggerId=' + bloggerId.toString())
+            if (result["IsSubscribed"]) {
+                btn.textContent = 'Unsubscribe'
+            } else {
+                btn.textContent = 'Subscribe'
+            }
+        });
+    }).catch((error) => {
+        console.log(error)
+    });
+}
+
+function subscriptionOnClick(bloggerId) {
+    let data = {
+        BloggerId: bloggerId,
+    };
+    fetch("/someoneIsSubscribed", {
+        headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+        },
+        method: "POST",
+        body: JSON.stringify(data)
+    }).then((response) => {
+        response.text().then(function (data) {
+            let result = JSON.parse(data);
+            const btn = document.getElementById('bloggerId=' + bloggerId.toString())
+            if (result["IsSubscribed"]) {
+                btn.textContent = 'Unsubscribe'
+            } else {
+                btn.textContent = 'Subscribe'
+            }
+        });
+    }).catch((error) => {
+        console.log(error)
+    });
+}

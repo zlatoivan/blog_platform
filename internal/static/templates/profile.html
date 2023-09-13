@@ -1,8 +1,11 @@
 {{template "header.html" .}}
 {{template "navbar.html" .}}
 
-<h1>Profile</h1>
-<h2>{{ .Blogger.Login }} ({{ .Blogger.Name }} {{ .Blogger.Surname }}, {{ .Blogger.Country }})</h2>
+<div class="container">
+    <h1>Profile</h1>
+    <h2>{{ .Blogger.Login }} ({{ .Blogger.Name }} {{ .Blogger.Surname }}, {{ .Blogger.Country }})</h2>
+</div>
+<br>
 
 {{if eq (len .ArticleForms) 0}}
     No articles. Create the first!
@@ -21,6 +24,7 @@
         <a href="/bloggers/{{ .Article.BloggerId }}/{{ .Article.ArticleId }}#comments">{{ .CommentsCnt }} comments</a>
     </div>
     <br>
+    <script>showLikes({{ .Article.ArticleId }})</script>
 {{end}}
 
 {{template "footer.html" .}}
